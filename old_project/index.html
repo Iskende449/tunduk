@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Цифровые документы</title>
+<style>
+    :root {
+        /* Точный синий цвет из приложения */
+        --primary-blue: #0F62D5; 
+        --bg-gray: #F2F3F5;
+        --text-dark: #000000;
+        --text-gray: #8A8A8E;
+        /* Радиус скругления карточек как на фото */
+        --card-radius: 24px; 
+    }
+
+    * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        /* Используем системный шрифт Apple */
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--primary-blue);
+        height: 100vh;
+        /* Учет безопасных зон для iPhone с челкой/островом */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* === HEADER === */
+    .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 44px; /* Стандартная высота хедера iOS */
+        padding: 0 16px;
+        color: white;
+        position: relative;
+        z-index: 10;
+    }
+
+    /* Блок для кнопки назад */
+    .header-left {
+        width: 40px;
+        display: flex;
+        align-items: center;
+    }
+
+    .back-btn-icon {
+        font-size: 22px;
+        font-weight: 300; /* Более тонкая стрелка */
+    }
+
+    /* Заголовок по центру */
+    .header-title {
+        font-size: 17px; /* Уменьшенный размер шрифта */
+        font-weight: 600;
+        text-align: center;
+        flex-grow: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Пустой блок справа для баланса центрирования */
+    .header-right {
+        width: 40px; 
+    }
+
+    /* === MAIN CONTENT CONTAINER === */
+    .main-content {
+        flex: 1;
+        position: relative;
+        transition: filter 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding-top: 20px;
+    }
+
+    /* Класс для размытия фона при открытии шторки */
+    .main-content.blurred {
+        filter: blur(10px);
+    }
+
+    /* === CARDS STACK === */
+    .card-stack {
+        position: relative;
+        width: 100%;
+        /* Высота контейнера под квадратные карты */
+        height: 45vh; 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 2vh;
+    }
+
+    .id-card {
+        position: absolute;
+        /* Ширина карты относительно экрана */
+        width: 85%; 
+        /* ВАЖНО: Делаем карту строго квадратной */
+        aspect-ratio: 1 / 1; 
+        border-radius: var(--card-radius);
+        /* Мягкая тень как в iOS */
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        background: #fff;
+        transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        overflow: hidden;
+        backface-visibility: hidden;
+        /* Белая рамка по контуру */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .id-card img {
+        width: 100%;
+        height: 100%;
+        /* Обрезаем изображение, чтобы заполнить квадрат */
+        object-fit: cover; 
+        display: block;
+        background: #f0f0f0;
+    }
+
+    /* Активная передняя карта */
+    .id-card.active {
+        z-index: 10;
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+
+    /* Задняя карта (скрытая) */
+    .id-card.behind {
+        z-index: 5;
+        /* Сдвигаем вниз и уменьшаем */
+        transform: scale(0.90) translateY(40px); 
+        /* Делаем полупрозрачной, чтобы скрыть текст */
+        opacity: 0.4; 
+    }
+
+    /* === PAGINATION DOTS === */
+    .dots {
+        display: flex;
+        gap: 8px;
+        margin-top: 25px;
+        z-index: 20;
+    }
+
+    .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transition: background 0.3s;
+    }
+
+    .dot.active {
+        background: #fff;
+    }
+
+    /* === BOTTOM FLOATING BUTTON (QR Trigger) === */
+    .fab-container {
+        position: absolute;
+        /* Отступ снизу с учетом безопасной зоны */
+        bottom: calc(30px + env(safe-area-inset-bottom));
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        z-index: 15;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .fab {
+        width: 60px;
+        height: 60px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        cursor: pointer;
+    }
+
+    .fab-inner {
+        width: 50px;
+        height: 50px;
+        background: var(--primary-blue);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* QR Icon SVG styling */
+    .qr-icon-svg {
+        width: 26px;
+        height: 26px;
+        color: white;
+    }
+
+    /* === BOTTOM SHEET === */
+    .sheet-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.2); /* Затемнение фона */
+        z-index: 99;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+    .sheet-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        border-radius: 28px 28px 0 0; /* Сильное скругление сверху */
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 100;
+        padding: 16px 24px;
+        /* Учет отступа снизу для iPhone */
+        padding-bottom: calc(40px + env(safe-area-inset-bottom));
+        max-height: 92vh;
+        overflow-y: auto;
+    }
+
+    .sheet.open {
+        transform: translateY(0);
+    }
+
+    .sheet-handle {
+        width: 36px;
+        height: 4px;
+        background: #D1D1D6;
+        border-radius: 2px;
+        margin: 0 auto 20px auto;
+    }
+
+    /* === QR CONTENT IN SHEET === */
+    .qr-display {
+        background: #F2F2F7; /* Светло-серый фон под QR */
+        border-radius: 20px;
+        padding: 24px;
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24px;
+    }
+
+    /* ВАЖНО: Сюда вставляется ваш QR код */
+    .qr-image {
+        width: 200px;
+        height: 200px;
+        /* Замените url('qr.png') на путь к вашему файлу в блоке стилей ниже */
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        /* Если картинки нет, будет белый квадрат */
+        background-color: white; 
+        border-radius: 4px; /* Небольшое скругление самого QR */
+    }
+
+    /* === TIMER === */
+    .timer-container {
+        margin-bottom: 28px;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: #E5E5EA;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--primary-blue);
+        width: 80%; /* Начальное состояние */
+        transition: width 1s linear;
+    }
+
+    .timer-text {
+        text-align: center;
+        color: var(--primary-blue);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.2px;
+    }
+
+    /* === TEXT INFO === */
+    .sheet-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 8px;
+        text-align: left;
+        letter-spacing: 0.3px;
+    }
+
+    .sheet-subtitle {
+        font-size: 15px;
+        color: var(--text-dark);
+        margin-bottom: 28px;
+        line-height: 1.3;
+        text-align: left;
+    }
+
+    /* === DATA FIELDS === */
+    .data-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-top: 10px;
+    }
+
+    .data-col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .data-col:last-child {
+        text-align: right;
+    }
+
+    .label {
+        font-size: 12px;
+        color: var(--text-gray);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        font-weight: 500;
+    }
+
+    .value {
+        font-size: 20px;
+        color: var(--text-dark);
+        font-weight: 600;
+        /* Моноширинный шрифт для цифр чтобы выглядело как пин */
+        font-family: "SF Mono", SFMono-Regular, ui-monospace, monospace;
+        letter-spacing: 0.5px;
+    }
+
+</style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-left">
+            <div class="back-btn-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+        </div>
+        <div class="header-title">Идентификационная карта</div>
+        <div class="header-right"></div> </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="card-stack" id="cardStack">
+            <div class="id-card active" onclick="swapCards()">
+                <img src="front.jpg" alt="Front ID">
+            </div>
+            <div class="id-card behind" onclick="swapCards()">
+                <img src="back.jpg" alt="Back ID">
+            </div>
+        </div>
+
+        <div class="dots">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+    <div class="fab-container" id="fabContainer">
+        <div class="fab" onclick="openSheet()">
+            <div class="fab-inner">
+                <svg class="qr-icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h0.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="sheet-overlay" id="overlay" onclick="closeSheet()"></div>
+
+    <div class="sheet" id="sheet">
+        <div class="sheet-handle"></div>
+        
+        <div class="qr-display">
+            <div class="qr-image" style="background-image: url('qr.png');"></div>
+        </div>
+
+        <div class="timer-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+            <div class="timer-text" id="timerText">До истечения действия временного QR-кода осталось 2 мин 46 секунд</div>
+        </div>
+
+        <div class="sheet-title">QR-код цифрового документа</div>
+        <div class="sheet-subtitle">Чтобы поделиться данными необходимо сообщить следующую информацию:</div>
+
+        <div class="data-row">
+            <div class="data-col">
+                <div class="label">ПИН:</div>
+                <div class="value">20103200650744</div>
+            </div>
+            <div class="data-col">
+                <div class="label">Временный пароль</div>
+                <div class="value" id="tempPass">324608</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- Логика переключения карт ---
+    let isFront = true;
+    const cards = document.querySelectorAll('.id-card');
+    const dots = document.querySelectorAll('.dot');
+
+    function swapCards() {
+        isFront = !isFront;
+        
+        if (isFront) {
+            // Передняя активна
+            cards[0].classList.add('active');
+            cards[0].classList.remove('behind');
+            cards[1].classList.add('behind');
+            cards[1].classList.remove('active');
+            
+            dots[0].classList.add('active');
+            dots[1].classList.remove('active');
+        } else {
+            // Задняя активна
+            cards[1].classList.add('active');
+            cards[1].classList.remove('behind');
+            cards[0].classList.add('behind');
+            cards[0].classList.remove('active');
+
+            dots[1].classList.add('active');
+            dots[0].classList.remove('active');
+        }
+    }
+
+    // --- Логика шторки (Размытие и Открытие) ---
+    const sheet = document.getElementById('sheet');
+    const overlay = document.getElementById('overlay');
+    const mainContent = document.getElementById('mainContent');
+    const fabContainer = document.getElementById('fabContainer');
+
+    function openSheet() {
+        sheet.classList.add('open');
+        overlay.classList.add('open');
+        mainContent.classList.add('blurred');
+        // Скрываем кнопку при открытии шторки
+        fabContainer.style.opacity = '0'; 
+        fabContainer.style.pointerEvents = 'none';
+        startTimer();
+    }
+
+    function closeSheet() {
+        sheet.classList.remove('open');
+        overlay.classList.remove('open');
+        mainContent.classList.remove('blurred');
+        // Возвращаем кнопку
+        fabContainer.style.opacity = '1';
+        fabContainer.style.pointerEvents = 'auto';
+    }
+
+    // Свайп вниз для закрытия шторки
+    let touchStartY = 0;
+    sheet.addEventListener('touchstart', e => {
+        touchStartY = e.touches[0].clientY;
+        // Если шторка прокручена вниз, не даем закрыть свайпом, даем скроллить контент
+        if (sheet.scrollTop > 5) touchStartY = -1; 
+    }, {passive: true});
+
+    sheet.addEventListener('touchmove', e => {
+        if (touchStartY < 0) return;
+        const touchY = e.touches[0].clientY;
+        const diff = touchY - touchStartY;
+        // Небольшая визуальная обратная связь при тяге вниз (опционально)
+        if (diff > 0 && diff < 200) {
+             sheet.style.transform = `translateY(${diff}px)`;
+        }
+    }, {passive: true});
+
+    sheet.addEventListener('touchend', e => {
+        if (touchStartY < 0) return;
+         sheet.style.transform = ''; // Сброс трансформации
+        const touchEndY = e.changedTouches[0].clientY;
+        // Если протянули вниз достаточно далеко - закрываем
+        if (touchEndY - touchStartY > 80) {
+            closeSheet();
+        }
+    }, {passive: true});
+
+
+    // --- Логика Таймера ---
+    let totalTime = 166; // 2 мин 46 сек
+    let currentTime = totalTime;
+    let timerInterval;
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        // Сбрасываем таймер при каждом открытии (как в оригинале)
+        currentTime = totalTime; 
+        updateTimerDisplay();
+        
+        timerInterval = setInterval(() => {
+            currentTime--;
+            if (currentTime < 0) {
+                // Таймер истек: сброс времени и генерация нового пароля
+                currentTime = totalTime;
+                document.getElementById('tempPass').innerText = Math.floor(100000 + Math.random() * 900000);
+            }
+            updateTimerDisplay();
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const mins = Math.floor(currentTime / 60);
+        let secs = currentTime % 60;
+        // Добавляем ноль перед секундами, если их меньше 10 (например, 2:05)
+        secs = secs < 10 ? '0' + secs : secs;
+        const percent = (currentTime / totalTime) * 100;
+
+        document.getElementById('progressBar').style.width = percent + '%';
+        document.getElementById('timerText').innerText = 
+            `До истечения действия временного QR-кода осталось ${mins} мин ${secs} секунд`;
+    }
+
+    // Инициализация таймера при загрузке (на всякий случай)
+    updateTimerDisplay();
+</script>
+
+</body>
+</html>
