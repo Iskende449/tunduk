@@ -118,9 +118,7 @@ const App = () => {
                             <div className="header-spacer"></div>
                         </div>
 
-                        <div className="bg-pattern" style={{ opacity: 0.1, filter: 'brightness(0) invert(1)' }}>
-                            <img src={mainLogo} alt="pattern" width="100%" height="100%" />
-                        </div>
+
 
                         <div className="card-stack">
                             <div className="id-card-wrapper">
